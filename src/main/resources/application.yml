@@ -1,0 +1,10 @@
+server:
+  port: 8080
+
+elasticsearch:
+  scheme: https
+  host: localhost:9200
+  username: elastic
+  password: password
+  index:
+    store-name: store
