@@ -15,6 +15,7 @@ import co.elastic.clients.elasticsearch.indices.PutMappingResponse;
 import com.demo.elasticsearch.config.elasticsearch.ElasticsearchIndexName;
 import com.demo.elasticsearch.model.elasticsearch.doc.StoreDoc;
 import com.demo.elasticsearch.repository.elasticsearch.filter.StoreDocFilter;
+import io.github.blaspat.ElasticsearchSimpleClient;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -25,22 +26,22 @@ import org.springframework.stereotype.Repository;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Repository
-public class StoreDocQuery {
-    private final ElasticsearchClient client;
+public class StoreDocQuery extends ElasticsearchSimpleClient {
     private final ElasticsearchIndexName indexName;
 
     @SneakyThrows
     public void createOrUpdateDocument(StoreDoc doc) {
-        IndexResponse response = client.index(i -> i.index(indexName.getStoreIndex()).id(doc.getId()).document(doc));
+        IndexResponse response = client().index(i -> i.index(indexName.getStoreIndex()).id(doc.getId()).document(doc));
     }
 
     @SneakyThrows //only usable if id exists
     public void updateDocument(String id, StoreDoc doc) {
-        client.update(u -> u.index(indexName.getStoreIndex()).id(id).doc(doc), StoreDoc.class);
+        client().update(u -> u.index(indexName.getStoreIndex()).id(id).doc(doc), StoreDoc.class);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -51,17 +52,17 @@ public class StoreDocQuery {
                 .properties("name", Property.of(p -> p.text(pk -> pk)))
         );
 
-        PutMappingResponse putMappingResponse = client.indices().putMapping(request);
+        PutMappingResponse putMappingResponse = client().indices().putMapping(request);
         log.info("Update mapping index {} : acknowledge {}", indexName.getStoreIndex(), putMappingResponse.acknowledged());
     }
 
     @SneakyThrows
     private void checkCreateIndex() {
-        if (client.indices().exists(e -> e.index(indexName.getStoreIndex())).value()) {
+        if (client().indices().exists(e -> e.index(indexName.getStoreIndex())).value()) {
             return;
         }
 
-        CreateIndexResponse createIndexResponse = client.indices().create(builder -> builder
+        CreateIndexResponse createIndexResponse = client().indices().create(builder -> builder
                 .index(indexName.getStoreIndex())
                 .mappings(TypeMapping.of(type -> type
                         .properties("code", Property.of(p -> p.keyword(pk -> pk)))
@@ -82,14 +83,14 @@ public class StoreDocQuery {
                 }))
         );
 
-        SearchResponse<StoreDoc> searchResponse = client.search(searchRequest, StoreDoc.class);
+        SearchResponse<StoreDoc> searchResponse = client().search(searchRequest, StoreDoc.class);
 
-        return searchResponse.hits().hits().stream().map(Hit::source).toList();
+        return searchResponse.hits().hits().stream().map(Hit::source).collect(Collectors.toList());
     }
 
     @SneakyThrows
     public StoreDoc getDocumentById(String id) {
-        GetResponse<StoreDoc> response = client.get(g -> g.index(indexName.getStoreIndex()).id(id), StoreDoc.class);
+        GetResponse<StoreDoc> response = client().get(g -> g.index(indexName.getStoreIndex()).id(id), StoreDoc.class);
         if (response.found()) {
             return response.source();
         } else {

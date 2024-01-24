@@ -37,7 +37,7 @@
         <dependency>
             <groupId>io.github.blaspat</groupId>
             <artifactId>elasticsearchclient</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.2</version>
         </dependency>
         <dependency>
             <groupId>jakarta.json</groupId>
